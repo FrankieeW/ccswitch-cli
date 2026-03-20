@@ -136,7 +136,13 @@ fn test_ai_mode_output() {
 
 #[test]
 fn test_empty_app_type() {
-    let (_stdout, _stderr, _code) = run_cli(&["list", "nonexistent"]);
+    let (stdout, stderr, code) = run_cli(&["list", "nonexistent"]);
+    assert_eq!(code, 0, "Should exit cleanly: stderr={}", stderr);
+    assert!(
+        stdout.contains("Providers") || stdout.contains("No providers"),
+        "Should handle empty app gracefully: {}",
+        stdout
+    );
 }
 
 #[test]

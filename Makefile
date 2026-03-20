@@ -3,16 +3,21 @@
 help:
 	@echo "ccswitch-cli test targets:"
 	@echo "  make test        - Run all tests with test database (local)"
-	@echo "  make test-db     - Create/refresh test database"
-	@echo "  make test-docker - Run tests in Docker"
+	@echo "  make test-local  - Run tests directly with CCSWITCH_DB_PATH"
+	@echo "  make test-docker - Run tests in Docker (requires Docker daemon)"
 	@echo "  make test-clean  - Clean test artifacts"
 
-test: test-db
+test:
 	./scripts/test-with-db.sh
 
 test-db:
-	@echo "Test database ready at test-fixtures/test.db"
-	@ls -la test-fixtures/test.db 2>/dev/null || (echo "Creating test DB..." && ./scripts/create-test-db.sh)
+	@if [ -f test-fixtures/test.db ]; then \
+		echo "Test database exists at test-fixtures/test.db"; \
+	else \
+		echo "ERROR: test-fixtures/test.db not found"; \
+		echo "The test database must be created manually from the local DB"; \
+		exit 1; \
+	fi
 
 test-docker:
 	docker build -f Dockerfile.test -t ccswitch-test .
