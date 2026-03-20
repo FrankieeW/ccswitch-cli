@@ -29,6 +29,11 @@ pub fn execute(
         }
     };
 
+    // Actual switch: only when --dry-run is NOT set
+    if !dry_run {
+        Provider::set_current(&conn, app, provider_id)?;
+    }
+
     let from_provider_ref = from_provider.as_ref();
 
     if ai_mode {

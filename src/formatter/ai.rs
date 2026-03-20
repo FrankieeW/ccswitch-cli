@@ -1,26 +1,27 @@
 use crate::db::{Provider, ProviderHealth};
 use std::fmt::Write;
 
-pub fn format_providers_list(app: &str, providers: &[Provider]) -> String {
-    let skill_url = "https://github.com/FrankieeW/agent-skills";
-    let skill_hint = "npx -g skills add https://github.com/FrankieeW/agent-skills";
+const SKILL_URL: &str = "https://github.com/FrankieeW/agent-skills";
+const SKILL_HINT: &str = "npx -g skills add https://github.com/FrankieeW/agent-skills";
 
+pub fn format_providers_list(app: &str, providers: &[Provider]) -> String {
     let mut xml = format!(
         r#"<ccswitch command="list" app_type="{}" skill_url="{}">
   <providers>"#,
-        app, skill_url
+        escape_xml(app),
+        SKILL_URL
     );
 
     for p in providers {
         let current_attr = if p.is_current {
-            " is_current=\"true\""
+            r#" is_current="true""#
         } else {
             ""
         };
         let category_attr = p
             .category
             .as_ref()
-            .map(|c| format!(" category=\"{}\"", c))
+            .map(|c| format!(r#" category="{}""#, escape_xml(c)))
             .unwrap_or_default();
         write!(
             xml,
@@ -34,11 +35,11 @@ pub fn format_providers_list(app: &str, providers: &[Provider]) -> String {
     }
 
     xml.push_str(&format!(
-        "
+        r#"
   </providers>
   <skill_install_hint>{}</skill_install_hint>
-</ccswitch>",
-        skill_hint
+</ccswitch>"#,
+        SKILL_HINT
     ));
 
     xml
@@ -51,8 +52,6 @@ pub fn format_switch_result(
     dry_run: bool,
     confirm: Option<&str>,
 ) -> String {
-    let skill_url = "https://github.com/FrankieeW/agent-skills";
-    let skill_hint = "npx -g skills add https://github.com/FrankieeW/agent-skills";
     let action = if dry_run { "dry_run" } else { "execute" };
 
     let confirm_token = confirm.map(|c| c.to_string()).unwrap_or_else(|| {
@@ -66,7 +65,9 @@ pub fn format_switch_result(
     let mut xml = format!(
         r#"<ccswitch command="switch" app_type="{}" action="{}" skill_url="{}">
   <from>"#,
-        app, action, skill_url
+        escape_xml(app),
+        action,
+        SKILL_URL
     );
 
     if let Some(p) = from {
@@ -97,7 +98,7 @@ pub fn format_switch_result(
         xml.push_str("\n  <confirm_needed>true</confirm_needed>");
         xml.push_str(&format!(
             "\n  <confirm_token>{}</confirm_token>",
-            confirm_token
+            escape_xml(&confirm_token)
         ));
     } else {
         xml.push_str("\n  <would_change>false</would_change>");
@@ -106,39 +107,40 @@ pub fn format_switch_result(
     }
 
     xml.push_str(&format!(
-        "
+        r#"
   <skill_install_hint>{}</skill_install_hint>
-</ccswitch>",
-        skill_hint
+</ccswitch>"#,
+        SKILL_HINT
     ));
 
     xml
 }
 
 pub fn format_current_provider(app: &str, provider: &Provider) -> String {
-    let skill_url = "https://github.com/FrankieeW/agent-skills";
-    let _skill_hint = "npx -g skills add https://github.com/FrankieeW/agent-skills";
-
+    // Build a complete, well-formed XML document so AI parsers never see
+    // truncated output.
     format!(
         r#"<ccswitch command="current" app_type="{}" skill_url="{}">
   <provider id="{}" name="{}">
-    <category>{}</category>"#,
-        app,
-        skill_url,
+    <category>{}</category>
+  </provider>
+  <skill_install_hint>{}</skill_install_hint>
+</ccswitch>"#,
+        escape_xml(app),
+        SKILL_URL,
         escape_xml(&provider.id),
         escape_xml(&provider.name),
-        escape_xml(provider.category.as_deref().unwrap_or("-"))
+        escape_xml(provider.category.as_deref().unwrap_or("-")),
+        SKILL_HINT
     )
 }
 
 pub fn format_health(app: &str, health_status: &[(&Provider, Option<ProviderHealth>)]) -> String {
-    let skill_url = "https://github.com/FrankieeW/agent-skills";
-    let skill_hint = "npx -g skills add https://github.com/FrankieeW/agent-skills";
-
     let mut xml = format!(
         r#"<ccswitch command="health" app_type="{}" skill_url="{}">
   <providers>"#,
-        app, skill_url
+        escape_xml(app),
+        SKILL_URL
     );
 
     for (provider, health) in health_status {
@@ -153,21 +155,24 @@ pub fn format_health(app: &str, health_status: &[(&Provider, Option<ProviderHeal
             provider.is_current,
             healthy,
             failures
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     xml.push_str(&format!(
-        "
+        r#"
   </providers>
   <skill_install_hint>{}</skill_install_hint>
-</ccswitch>",
-        skill_hint
+</ccswitch>"#,
+        SKILL_HINT
     ));
 
     xml
 }
 
-fn escape_xml(s: &str) -> String {
+/// Escape characters that are illegal in XML attribute values and text nodes.
+/// Order matters: `&` must be escaped first so subsequent escapes don't double-encode.
+pub fn escape_xml(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")

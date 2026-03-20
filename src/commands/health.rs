@@ -6,11 +6,17 @@ pub fn execute(app: &str, ai_mode: bool) -> Result<()> {
     let conn = db::connect()?;
     let providers = Provider::get_all(&conn, app)?;
 
-    let mut health_status: Vec<(&Provider, Option<ProviderHealth>)> = Vec::new();
-    for p in &providers {
-        let health = ProviderHealth::get_for_provider(&conn, app, &p.id)?;
-        health_status.push((p, health));
-    }
+    // Single query: get all health rows for this app type at once.
+    let health_map: std::collections::HashMap<String, ProviderHealth> =
+        ProviderHealth::get_all_for_app(&conn, app)?
+            .into_iter()
+            .map(|h| (h.provider_id.clone(), h))
+            .collect();
+
+    let health_status: Vec<(&Provider, Option<ProviderHealth>)> = providers
+        .iter()
+        .map(|p| (p, health_map.get(&p.id).cloned()))
+        .collect();
 
     if ai_mode {
         println!("{}", formatter::ai::format_health(app, &health_status));

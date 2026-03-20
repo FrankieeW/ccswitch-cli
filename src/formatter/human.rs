@@ -102,11 +102,14 @@ fn capitalize(s: &str) -> String {
     }
 }
 
+/// Truncate `s` to at most `len` characters, appending "..." if it was cut.
+/// Uses character iteration so non-ASCII strings are sliced safely.
 fn truncate(s: &str, len: usize) -> String {
-    if s.len() <= len {
+    let mut chars = s.chars();
+    if chars.clone().count() <= len {
         s.to_string()
     } else {
-        format!("{}...", &s[..len.saturating_sub(3)])
+        chars.by_ref().take(len.saturating_sub(3)).collect::<String>() + "..."
     }
 }
 
