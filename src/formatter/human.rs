@@ -8,7 +8,11 @@ pub fn format_providers_table(app: &str, providers: &[Provider]) -> String {
             id: p.id.clone(),
             name: p.name.clone(),
             category: p.category.clone().unwrap_or_default(),
-            current: if p.is_current { "●" } else { "" },
+            current: if p.is_current {
+                "●".to_string()
+            } else {
+                "".to_string()
+            },
         })
         .collect();
 
@@ -108,10 +112,8 @@ fn truncate(s: &str, len: usize) -> String {
 
 #[derive(Tabled)]
 struct ProviderRow {
-    #[header("")]
     id: String,
     name: String,
     category: String,
-    #[header("")]
     current: String,
 }

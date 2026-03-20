@@ -117,7 +117,7 @@ pub fn format_switch_result(
 
 pub fn format_current_provider(app: &str, provider: &Provider) -> String {
     let skill_url = "https://github.com/FrankieeW/agent-skills";
-    let skill_hint = "npx -g skills add https://github.com/FrankieeW/agent-skills";
+    let _skill_hint = "npx -g skills add https://github.com/FrankieeW/agent-skills";
 
     format!(
         r#"<ccswitch command="current" app_type="{}" skill_url="{}">
@@ -143,8 +143,8 @@ pub fn format_health(app: &str, health_status: &[(&Provider, Option<ProviderHeal
     );
 
     for (provider, health) in health_status {
-        let healthy = health.map(|h| h.is_healthy).unwrap_or(false);
-        let failures = health.map(|h| h.consecutive_failures).unwrap_or(0);
+        let healthy = health.as_ref().map(|h| h.is_healthy).unwrap_or(false);
+        let failures = health.as_ref().map(|h| h.consecutive_failures).unwrap_or(0);
 
         write!(
             xml,

@@ -19,7 +19,10 @@ pub fn connect() -> Result<Connection> {
     };
 
     if !path.exists() {
-        anyhow::bail!("Database not found at {:?}. Please install and run CC Switch first.", path);
+        anyhow::bail!(
+            "Database not found at {:?}. Please install and run CC Switch first.",
+            path
+        );
     }
 
     Connection::open(&path).context("Failed to open database")

@@ -6,12 +6,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(
-    name = "ccswitch-cli",
-    about = "CLI for managing CC Switch providers",
-    version,
-    global_setting = clap::AppSettings::GlobalVersion
-)]
+#[command(name = "ccswitch-cli", about = "CLI for managing CC Switch providers")]
 struct Cli {
     #[arg(long, help = "AI-friendly output mode (XML)")]
     ai: bool,

@@ -1,2 +1,2 @@
-pub mod human;
 pub mod ai;
+pub mod human;
