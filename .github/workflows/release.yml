@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+
+      - name: Build macOS (Intel)
+        run: cargo build --release --target x86_64-apple-darwin
+        env:
+          CARGO_INCREMENTAL: "0"
+
+      - name: Build macOS (Apple Silicon)
+        run: cargo build --release --target aarch64-apple-darwin
+        env:
+          CARGO_INCREMENTAL: "0"
+
+      - name: Build Linux
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+        env:
+          CARGO_INCREMENTAL: "0"
+
+      - name: Generate shell completions
+        run: |
+          mkdir -p completions
+          ./target/x86_64-unknown-linux-gnu/release/ccswitch-cli completions bash > completions/ccswitch-cli.bash
+          ./target/x86_64-unknown-linux-gnu/release/ccswitch-cli completions zsh > completions/ccswitch-cli.zsh
+          ./target/x86_64-unknown-linux-gnu/release/ccswitch-cli completions fish > completions/ccswitch-cli.fish
+
+      - name: Prepare binaries
+        run: |
+          mkdir -p release
+          cp target/x86_64-apple-darwin/release/ccswitch-cli release/ccswitch-cli-x86_64-apple-darwin
+          cp target/aarch64-apple-darwin/release/ccswitch-cli release/ccswitch-cli-aarch64-apple-darwin
+          cp target/x86_64-unknown-linux-gnu/release/ccswitch-cli release/ccswitch-cli-x86_64-unknown-linux-gnu
+          cp completions/* release/
+
+      - name: Create SHA256 checksums
+        run: |
+          cd release
+          sha256sum ccswitch-cli-* > checksums.txt
+          cat checksums.txt
+
+      - name: Create Homebrew formula
+        env:
+          TAG: ${{ github.ref_name }}
+          REVISION: ${{ github.sha }}
+        run: |
+          cat > Formula/ccswitch-cli.rb << 'RUBY'
+          class CcswitchCli < Formula
+            desc "CLI for managing CC Switch providers"
+            homepage "https://github.com/FrankieeW/ccswitch-cli"
+            url "https://github.com/FrankieeW/ccswitch-cli.git", tag: ENV["TAG"], revision: ENV["REVISION"]
+            license "MIT"
+
+            def install
+              bin.install "ccswitch-cli-x86_64-apple-darwin" => "ccswitch-cli" if OS.mac? && Hardware::CPU.intel?
+              bin.install "ccswitch-cli-aarch64-apple-darwin" => "ccswitch-cli" if OS.mac? && Hardware::CPU.arm?
+              bin.install "ccswitch-cli-x86_64-unknown-linux-gnu" => "ccswitch-cli" if OS.linux?
+            end
+
+            test do
+              assert_match "ccswitch-cli", shell_output("#{bin}/ccswitch-cli --version")
+            end
+          end
+          RUBY
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/ccswitch-cli-*
+            release/checksums.txt
+            release/*.bash
+            release/*.zsh
+            release/*.fish
+            Formula/ccswitch-cli.rb
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -94,7 +94,7 @@ pub fn format_switch_result(
 
     if dry_run {
         xml.push_str("\n  <would_change>true</would_change>");
-        xml.push_str(&format!("\n  <confirm_needed>true</confirm_needed>"));
+        xml.push_str("\n  <confirm_needed>true</confirm_needed>");
         xml.push_str(&format!(
             "\n  <confirm_token>{}</confirm_token>",
             confirm_token
@@ -129,7 +129,6 @@ pub fn format_current_provider(app: &str, provider: &Provider) -> String {
         escape_xml(&provider.name),
         escape_xml(provider.category.as_deref().unwrap_or("-"))
     )
-    .into()
 }
 
 pub fn format_health(app: &str, health_status: &[(&Provider, Option<ProviderHealth>)]) -> String {

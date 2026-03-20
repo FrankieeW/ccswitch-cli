@@ -5,6 +5,9 @@ use rusqlite::Connection;
 use std::path::PathBuf;
 
 pub fn get_db_path() -> Result<PathBuf> {
+    if let Ok(db_path) = std::env::var("CCSWITCH_DB_PATH") {
+        return Ok(PathBuf::from(db_path));
+    }
     let home = dirs::home_dir().context("Cannot find home directory")?;
     Ok(home.join(".cc-switch/cc-switch.db"))
 }

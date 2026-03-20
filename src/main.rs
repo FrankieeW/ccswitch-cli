@@ -3,10 +3,15 @@ mod db;
 mod formatter;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 
 #[derive(Parser, Debug)]
-#[command(name = "ccswitch-cli", about = "CLI for managing CC Switch providers")]
+#[command(
+    name = "ccswitch-cli",
+    about = "CLI for managing CC Switch providers",
+    version
+)]
 struct Cli {
     #[arg(long, help = "AI-friendly output mode (XML)")]
     ai: bool,
@@ -15,7 +20,7 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 enum Commands {
     #[command(about = "List providers for an app")]
     List {
@@ -43,6 +48,11 @@ enum Commands {
         #[arg(help = "App type: claude, opencode, openclaw, codex, gemini")]
         app: String,
     },
+    #[command(about = "Generate shell completions")]
+    Completions {
+        #[arg(help = "Shell to generate completions for (bash, elvish, fish, powershell, zsh)")]
+        shell: Shell,
+    },
 }
 
 fn main() -> Result<()> {
@@ -57,6 +67,11 @@ fn main() -> Result<()> {
         } => commands::switch::execute(app, provider, *dry_run, confirm.as_deref(), cli.ai),
         Commands::Current { app } => commands::current::execute(app, cli.ai),
         Commands::Health { app } => commands::health::execute(app, cli.ai),
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            clap_complete::generate(*shell, &mut cmd, "ccswitch-cli", &mut std::io::stdout());
+            Ok(())
+        }
     };
 
     if let Err(e) = result {
